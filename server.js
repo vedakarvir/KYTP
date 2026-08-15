@@ -11,6 +11,9 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// SERVE STATIC FILES (Frontend)
+app.use(express.static('public'));
+
 // ROUTES
 app.get('/health', (req, res) => {
   res.json({ 
@@ -20,9 +23,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({ 
-    message: 'GST Payment Platform',
+    message: 'GST Payment Platform API',
     version: '0.1.0',
     endpoints: {
       health: '/health'
@@ -42,5 +45,7 @@ app.use((err, req, res, next) => {
 // START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 GST Payment API running on port ${PORT}`);
+  console.log(`🚀 GST Payment Platform running on port ${PORT}`);
+  console.log(`📱 Frontend: http://localhost:${PORT}/`);
+  console.log(`🔍 Health: http://localhost:${PORT}/health`);
 });
