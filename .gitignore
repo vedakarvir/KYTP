@@ -1,0 +1,112 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment Variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Credentials & Keys (NEVER commit these!)
+google-cloud-key.json
+service-account-key.json
+*.pem
+*.key
+*.cert
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pg_data/
+postgres_data/
+
+# Cache
+.cache/
+.eslintcache
+.stylelintcache
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Local development
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Optional npm cache
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Ignore backup files
+*.backup
+*.bak
+
+# Railway specific
+.railway/
+
+# Fly.io specific
+.fly/
+
+# AWS specific
+.aws/
+
+# Google Cloud specific (except schema)
+service-account-*.json
+google-credentials.json
+
+# Upload directory (if used)
+uploads/
+temp-uploads/
+receipts/
+
+# Don't commit these secrets (example - remove before committing)
+.env.example.local
+
+# MacOS
+.AppleDouble
+.AppleDB
+
+# Linux
+.~

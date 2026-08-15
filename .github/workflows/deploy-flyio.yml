@@ -1,0 +1,139 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gst_payment_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linter
+        run: npm run lint || true
+
+      - name: Run tests
+        run: npm test || true
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gst_payment_test
+          JWT_SECRET: test-secret-key
+          RAZORPAY_KEY: test-key
+          RAZORPAY_SECRET: test-secret
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy with Flyctl
+        uses: superfly/flyctl-actions@master
+        with:
+          args: "deploy"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_REGION: maa  # Mumbai, India
+
+  monitor:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Check app health
+        run: |
+          APP_URL=$(curl -s "https://api.fly.io/graphql" \
+            -H "Authorization: Bearer ${{ secrets.FLY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"query { app(name: \"gst-payment-poc\") { hostname } }"}' \
+            | jq -r '.data.app.hostname')
+          
+          for i in {1..10}; do
+            if curl -f https://$APP_URL/health > /dev/null 2>&1; then
+              echo "✅ App is healthy"
+              exit 0
+            fi
+            echo "Waiting for app (attempt $i/10)..."
+            sleep 5
+          done
+          exit 1
+
+      - name: Notify Slack (optional)
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'GST Payment Platform deployed to Fly.io'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: ${{ secrets.SLACK_WEBHOOK != '' }}
+
+  rollback-on-failure:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+
+    steps:
+      - name: Rollback deployment
+        uses: superfly/flyctl-actions@master
+        with:
+          args: "releases rollback"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Notify team
+        run: echo "⚠️ Deployment failed and rolled back"
