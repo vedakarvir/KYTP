@@ -408,3 +408,7 @@ app.listen(PORT, () => {
   console.log(`🚀 GST Payment Platform running on port ${PORT}`);
   console.log(`✅ GST Validation: POST /api/gst/validate`);
 });
+
+
+const upiRoutes = require('./routes/upiStringGenerator');
+app.use('/api/upi', upiRoutes);
